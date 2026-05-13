@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+<title>Onsite Support Manager v1.2</title>
+<style>
+  :root{--bg:#f3f5f9;--card:#ffffff;--primary:#1a73e8;--primary-dark:#1557b0;--danger:#d93025;--success:#188038;--warn:#f29900;--text:#202124;--muted:#5f6368;--border:#dadce0;--chip:#e8f0fe;}
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--text);font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;font-size:15px;line-height:1.45}
+  header{position:sticky;top:0;z-index:50;background:var(--primary);color:#fff;padding:12px 14px;display:flex;justify-content:space-between;align-items:center;box-shadow:0 2px 4px rgba(0,0,0,.1)}
+  header h1{margin:0;font-size:17px;font-weight:600}
+  header .badge{font-size:11px;background:rgba(255,255,255,.2);padding:2px 8px;border-radius:10px}
+  nav{display:flex;background:#fff;border-bottom:1px solid var(--border);position:sticky;top:46px;z-index:40}
+  nav button{flex:1;border:0;background:transparent;padding:11px 4px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;border-bottom:3px solid transparent;transition:.15s}
+  nav button.active{color:var(--primary);border-bottom-color:var(--primary)}
+  main{padding:14px;max-width:680px;margin:0 auto;padding-bottom:90px}
+  .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+  .card h3{margin:0 0 6px 0;font-size:15px}
+  .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+  .row + .row{margin-top:6px}
+  label{display:block;font-size:12px;color:var(--muted);margin:10px 0 4px;font-weight:600}
+  input,select,textarea{width:100%;padding:10px 12px;border:1px solid var(--border);border-radius:8px;font-size:15px;background:#fff;font-family:inherit}
+  textarea{resize:vertical;min-height:70px}
+  input:focus,select:focus,textarea:focus{outline:2px solid var(--primary);border-color:transparent}
+  button.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:11px 16px;border:0;border-radius:8px;font-size:14px;font-weight:600;cursor:pointer;background:var(--primary);color:#fff;transition:.15s}
+  button.btn:hover{background:var(--primary-dark)}
+  button.btn.secondary{background:#fff;color:var(--primary);border:1px solid var(--primary)}
+  button.btn.danger{background:var(--danger)}
+  button.btn.success{background:var(--success)}
+  button.btn.warn{background:var(--warn);color:#222}
+  button.btn:disabled{opacity:.55;cursor:not-allowed}
+  .chip{display:inline-block;background:var(--chip);color:var(--primary-dark);border-radius:12px;padding:2px 9px;font-size:11px;font-weight:600;margin-right:4px}
+  .chip.open{background:#fce8e6;color:var(--danger)}
+  .chip.resolved{background:#e6f4ea;color:var(--success)}
+  .chip.unsolved{background:#fef7e0;color:#b06000}
+  .ticket{cursor:pointer}
+  .ticket .ticket-h{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+  .ticket .ticket-t{font-weight:600;margin:3px 0;font-size:14px}
+  .empty{text-align:center;color:var(--muted);padding:30px 14px}
+  .modal-bg{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:flex-end;justify-content:center;z-index:100}
+  .modal-bg.show{display:flex}
+  .modal{background:#fff;width:100%;max-width:680px;max-height:92vh;overflow-y:auto;border-radius:14px 14px 0 0;padding:18px 16px 100px;animation:slideUp .2s}
+  @media(min-width:680px){.modal-bg{align-items:center}.modal{border-radius:14px;padding:18px}}
+  @keyframes slideUp{from{transform:translateY(40px);opacity:0}to{transform:translateY(0);opacity:1}}
+  .modal h2{margin:0 0 4px;font-size:18px}
+  .modal-actions{position:sticky;bottom:-1px;background:#fff;padding-top:12px;margin-top:14px;border-top:1px solid var(--border);display:flex;gap:8px}
+  .modal-actions .btn{flex:1}
+  .toast{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:#202124;color:#fff;padding:11px 18px;border-radius:25px;font-size:13px;z-index:200;box-shadow:0 4px 10px rgba(0,0,0,.2);opacity:0;pointer-events:none;transition:opacity .25s;max-width:90vw;text-align:center}
+  .toast.show{opacity:1}
+  .toast.error{background:var(--danger)}
+  .loader{display:inline-block;width:14px;height:14px;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .8s linear infinite;vertical-align:middle}
+  @keyframes spin{to{transform:rotate(360deg)}}
+  .month-group{margin-bottom:14px}
+  .month-group .month-head{display:flex;justify-content:space-between;align-items:center;background:#e8eaed;padding:8px 12px;border-radius:8px;margin-bottom:6px;font-weight:600;font-size:13px}
+  .danger-link{color:var(--danger);text-decoration:underline;cursor:pointer;font-size:12px}
+  .help{font-size:11px;color:var(--muted);margin-top:4px}
+  kbd{background:#eee;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px}
+  .ver{font-size:9px;opacity:.7;margin-left:4px}
+</style>
+</head>
+<body>
+<header>
+  <h1>🛠 Onsite Support<span class="ver">v1.2</span></h1>
+  <span class="badge" id="connBadge">offline</span>
+</header>
+<nav>
+  <button data-tab="new" class="active">New</button>
+  <button data-tab="open">Open <span id="openCount" class="chip open" style="display:none">0</span></button>
+  <button data-tab="resolved">Resolved</button>
+  <button data-tab="settings">⚙</button>
+</nav>
+<main>
+  <section id="tab-new">
+    <div class="card">
+      <h3>📝 Create Request</h3>
+      <p class="help">Submit a new support request. Duplicate open requests for the same serial number are blocked.</p>
+      <label>Requester</label><select id="f_requester"><option value="">— select —</option></select>
+      <label>Serial Number</label><select id="f_serial"><option value="">— select —</option></select>
+      <div id="f_serialInfo" class="help"></div>
+      <label>Trouble Type</label><select id="f_troubleType"><option value="">— select —</option></select>
+      <label>Trouble Detail</label><textarea id="f_troubleDetail" placeholder="Describe the issue..."></textarea>
+      <div class="row" style="margin-top:14px">
+        <button class="btn" id="btnCreate">Submit Request</button>
+        <button class="btn secondary" id="btnClear">Clear</button>
+      </div>
+    </div>
+  </section>
+  <section id="tab-open" hidden>
+    <div class="card"><div class="row" style="justify-content:space-between"><h3 style="margin:0">🚨 Open Tickets</h3><button class="btn secondary" id="btnRefreshOpen">↻ Refresh</button></div></div>
+    <div id="openList"></div>
+  </section>
+  <section id="tab-resolved" hidden>
+    <div class="card">
+      <div class="row" style="justify-content:space-between"><h3 style="margin:0">✅ Resolved Tickets</h3><button class="btn secondary" id="btnRefreshResolved">↻ Refresh</button></div>
+      <div class="row" style="margin-top:10px">
+        <select id="reportYear" style="flex:1"></select>
+        <select id="reportMonth" style="flex:1"></select>
+        <button class="btn warn" id="btnReport" style="flex:1.4">📊 Generate Report</button>
+      </div>
+      <div class="help">Exports a monthly report sheet (with summary + all tickets) into the spreadsheet.</div>
+    </div>
+    <div id="resolvedList"></div>
+  </section>
+  <section id="tab-settings" hidden>
+    <div class="card">
+      <h3>🔌 Connection</h3>
+      <label>Google Apps Script Web App URL</label>
+      <input id="cfgUrl" placeholder="https://script.google.com/macros/s/.../exec" />
+      <div class="row" style="margin-top:10px"><button class="btn" id="btnSaveCfg">Save & Test</button><button class="btn secondary" id="btnBootstrap">Bootstrap Sheet</button></div>
+      <div class="help">Deploy <kbd>Code.gs</kbd> as Web App (Execute as Me, Access Anyone) and paste the URL here.</div>
+    </div>
+    <div class="card"><h3>👥 Staff Master</h3><div class="row"><input id="addStaff" placeholder="Add staff name" /><button class="btn" id="btnAddStaff">Add</button></div><div id="staffList" style="margin-top:8px"></div></div>
+    <div class="card"><h3>🔢 Serial Number Master</h3><div class="row"><input id="addSerial" placeholder="Serial (required)" /></div><div class="row"><input id="addSerialModel" placeholder="Model (optional)" /></div><div class="row"><input id="addSerialCustomer" placeholder="Customer (optional)" /><button class="btn" id="btnAddSerial">Add</button></div><div id="serialList" style="margin-top:8px"></div></div>
+    <div class="card"><h3>🏷 Trouble Type Master</h3><div class="row"><input id="addTrouble" placeholder="Add trouble type" /><button class="btn" id="btnAddTrouble">Add</button></div><div id="troubleList" style="margin-top:8px"></div></div>
+    <div class="card"><h3>ℹ About</h3><p class="help">Onsite Support Manager v1.2 — fixed action field name collision.<br>All data lives in your Google Sheet.</p></div>
+  </section>
+</main>
+<div class="modal-bg" id="modalBg"><div class="modal" id="modal"><h2 id="modalTitle">Ticket</h2><div id="modalBody"></div><div class="modal-actions"><button class="btn secondary" id="modalClose">Close</button></div></div></div>
+<div class="toast" id="toast"></div>
+<script>
+const STORAGE_KEY='onsite-support-config';
+let CONFIG=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
+let MASTERS={staff:[],serials:[],trouble:[]};
+let CACHE={open:[],resolved:[]};
+async function api(action,payload={}){
+  if(!CONFIG.url) throw new Error('GAS URL not configured. Open ⚙ Settings.');
+  // CRITICAL: routing key "action" must come AFTER spread of payload
+  // so user-provided fields can never overwrite it
+  const body=JSON.stringify(Object.assign({},payload,{action:action}));
+  const res=await fetch(CONFIG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body});
+  const text=await res.text();
+  let json;
+  try{json=JSON.parse(text);}catch(e){throw new Error('Bad response: '+text.slice(0,200));}
+  if(!json.ok) throw new Error(json.error||'Unknown error');
+  return json.data;
+}
+function $(id){return document.getElementById(id);}
+function toast(msg,isErr){const t=$('toast');t.textContent=msg;t.classList.toggle('error',!!isErr);t.classList.add('show');clearTimeout(toast._t);toast._t=setTimeout(()=>t.classList.remove('show'),4000);}
+function fmtDate(d){if(!d)return'';const x=new Date(d);if(isNaN(x))return String(d);const pad=n=>String(n).padStart(2,'0');return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate())+' '+pad(x.getHours())+':'+pad(x.getMinutes());}
+function fmtMonth(d){if(!d)return'Unknown';const x=new Date(d);if(isNaN(x))return'Unknown';return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');}
+function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+document.querySelectorAll('nav button').forEach(b=>{
+  b.addEventListener('click',()=>{
+    document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
+    b.classList.add('active');
+    const tab=b.dataset.tab;
+    ['new','open','resolved','settings'].forEach(t=>$('tab-'+t).hidden=(t!==tab));
+    if(tab==='open')refreshOpen();
+    else if(tab==='resolved')refreshResolved();
+    else if(tab==='settings')renderMastersList();
+  });
+});
+$('cfgUrl').value=CONFIG.url||'';
+$('btnSaveCfg').addEventListener('click',async()=>{
+  const url=$('cfgUrl').value.trim();
+  if(!url)return toast('Enter URL',true);
+  CONFIG.url=url;localStorage.setItem(STORAGE_KEY,JSON.stringify(CONFIG));
+  try{const r=await api('ping');$('connBadge').textContent='connected v'+r.version;$('connBadge').style.background='rgba(0,255,0,.3)';toast('Connected ✓ v'+r.version);await loadMasters();}catch(e){toast(e.message,true);}
+});
+$('btnBootstrap').addEventListener('click',async()=>{
+  try{const r=await api('bootstrap');toast('Sheet ready');if(r.spreadsheetUrl){if(confirm('Spreadsheet ready. Open it now?\n\n'+r.spreadsheetUrl))window.open(r.spreadsheetUrl,'_blank');}await loadMasters();}catch(e){toast(e.message,true);}
+});
+async function loadMasters(){try{MASTERS=await api('getMasters');populateRequestForm();renderMastersList();}catch(e){toast(e.message,true);}}
+function populateRequestForm(){
+  const sel=(id,items,placeholder)=>{const el=$(id);el.innerHTML='<option value="">— '+placeholder+' —</option>'+items.map(v=>'<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>').join('');};
+  sel('f_requester',MASTERS.staff,'select requester');
+  $('f_serial').innerHTML='<option value="">— select serial —</option>'+MASTERS.serials.map(s=>'<option value="'+escapeHtml(s.serial)+'">'+escapeHtml(s.serial)+(s.model?' / '+escapeHtml(s.model):'')+(s.customer?' / '+escapeHtml(s.customer):'')+'</option>').join('');
+  sel('f_troubleType',MASTERS.trouble,'select type');
+}
+$('f_serial').addEventListener('change',e=>{const s=MASTERS.serials.find(x=>x.serial===e.target.value);$('f_serialInfo').textContent=s?[s.model,s.customer].filter(Boolean).join(' · '):'';});
+function renderMastersList(){
+  const renderRow=(val,type)=>'<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee"><span>'+escapeHtml(val)+'</span><span class="danger-link" data-type="'+type+'" data-val="'+escapeHtml(val)+'">delete</span></div>';
+  $('staffList').innerHTML=MASTERS.staff.map(v=>renderRow(v,'staff')).join('')||'<div class="empty">empty</div>';
+  $('serialList').innerHTML=MASTERS.serials.map(s=>{const display=s.serial+(s.model?' · '+s.model:'')+(s.customer?' · '+s.customer:'');return '<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee"><span>'+escapeHtml(display)+'</span><span class="danger-link" data-type="serial" data-val="'+escapeHtml(s.serial)+'">delete</span></div>';}).join('')||'<div class="empty">empty</div>';
+  $('troubleList').innerHTML=MASTERS.trouble.map(v=>renderRow(v,'trouble')).join('')||'<div class="empty">empty</div>';
+  document.querySelectorAll('.danger-link').forEach(a=>{a.addEventListener('click',async e=>{const type=e.target.dataset.type,val=e.target.dataset.val;if(!confirm('Delete "'+val+'"?'))return;try{await api('deleteMaster',{type,value:val});toast('Deleted');await loadMasters();}catch(err){toast(err.message,true);}});});
+}
+$('btnAddStaff').addEventListener('click',async()=>{const v=$('addStaff').value.trim();if(!v)return;try{await api('addMaster',{type:'staff',value:v});$('addStaff').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
+$('btnAddSerial').addEventListener('click',async()=>{const serial=$('addSerial').value.trim();if(!serial)return;try{await api('addMaster',{type:'serial',value:{serial,model:$('addSerialModel').value.trim(),customer:$('addSerialCustomer').value.trim()}});$('addSerial').value='';$('addSerialModel').value='';$('addSerialCustomer').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
+$('btnAddTrouble').addEventListener('click',async()=>{const v=$('addTrouble').value.trim();if(!v)return;try{await api('addMaster',{type:'trouble',value:v});$('addTrouble').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
+$('btnClear').addEventListener('click',()=>{['f_requester','f_serial','f_troubleType'].forEach(id=>$(id).value='');$('f_troubleDetail').value='';$('f_serialInfo').textContent='';});
+$('btnCreate').addEventListener('click',async()=>{
+  const payload={requester:$('f_requester').value,serial:$('f_serial').value,troubleType:$('f_troubleType').value,troubleDetail:$('f_troubleDetail').value.trim()};
+  if(!payload.requester||!payload.serial||!payload.troubleDetail)return toast('Requester, Serial and Detail are required',true);
+  const btn=$('btnCreate');btn.disabled=true;btn.innerHTML='<span class="loader"></span> Submitting...';
+  try{const r=await api('createRequest',payload);toast('Request created: '+r.id);$('btnClear').click();document.querySelector('nav button[data-tab="open"]').click();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Submit Request';}
+});
+function ticketCard(t){
+  const trouble=(t.TroubleType?'<span class="chip">'+escapeHtml(t.TroubleType)+'</span>':'');
+  const status=t.Status==='Open'?'<span class="chip open">OPEN</span>':'<span class="chip resolved">RESOLVED</span>'+(t.Outcome==='Unsolved'?'<span class="chip unsolved">UNSOLVED</span>':'');
+  return '<div class="card ticket" data-id="'+escapeHtml(t.ID)+'"><div class="ticket-h"><span><b>'+escapeHtml(t.ID)+'</b> · '+fmtDate(t.RequestedAt)+'</span><span>'+status+'</span></div><div class="ticket-t">'+escapeHtml(t.Serial||'')+' — '+escapeHtml(String(t.TroubleDetail||'').slice(0,80))+'</div><div class="ticket-h">'+trouble+'<span>by '+escapeHtml(t.Requester||'')+'</span></div>'+(t.Status==='Resolved'&&t.WorkMinutes?'<div class="ticket-h"><span>Handler: '+escapeHtml(t.Handler||'')+'</span><span>'+t.WorkMinutes+' min</span></div>':'')+'</div>';
+}
+async function refreshOpen(){
+  const list=$('openList');list.innerHTML='<div class="empty">Loading…</div>';
+  try{CACHE.open=await api('listRequests',{status:'open'});if(!CACHE.open.length)list.innerHTML='<div class="empty">No open tickets 🎉</div>';else list.innerHTML=CACHE.open.map(ticketCard).join('');const c=$('openCount');c.textContent=CACHE.open.length;c.style.display=CACHE.open.length?'':'none';list.querySelectorAll('.ticket').forEach(el=>el.addEventListener('click',()=>openTicketDetail(el.dataset.id,'open')));}catch(e){list.innerHTML='<div class="empty">'+escapeHtml(e.message)+'</div>';}
+}
+async function refreshResolved(){
+  const list=$('resolvedList');list.innerHTML='<div class="empty">Loading…</div>';
+  try{CACHE.resolved=await api('listRequests',{status:'resolved'});if(!CACHE.resolved.length){list.innerHTML='<div class="empty">No resolved tickets yet</div>';return;}const groups={};CACHE.resolved.forEach(t=>{const k=fmtMonth(t.ResolvedAt||t.RequestedAt);(groups[k]=groups[k]||[]).push(t);});const keys=Object.keys(groups).sort().reverse();list.innerHTML=keys.map(k=>{const items=groups[k];const totalMin=items.reduce((s,r)=>s+(parseInt(r.WorkMinutes,10)||0),0);return '<div class="month-group"><div class="month-head"><span>'+k+'</span><span>'+items.length+' tickets · '+totalMin+' min</span></div>'+items.map(ticketCard).join('')+'</div>';}).join('');list.querySelectorAll('.ticket').forEach(el=>el.addEventListener('click',()=>openTicketDetail(el.dataset.id,'resolved')));}catch(e){list.innerHTML='<div class="empty">'+escapeHtml(e.message)+'</div>';}
+}
+$('btnRefreshOpen').addEventListener('click',refreshOpen);
+$('btnRefreshResolved').addEventListener('click',refreshResolved);
+
+function openTicketDetail(id,kind){
+  const t=(kind==='open'?CACHE.open:CACHE.resolved).find(x=>x.ID===id);if(!t)return;
+  $('modalTitle').innerHTML=t.ID+' — '+(t.Status==='Open'?'<span class="chip open">OPEN</span>':'<span class="chip resolved">RESOLVED</span>');
+  let html='';
+  html+='<p><b>Requested:</b> '+fmtDate(t.RequestedAt)+'</p>';
+  html+='<p><b>Requester:</b> '+escapeHtml(t.Requester||'')+'</p>';
+  html+='<p><b>Serial:</b> '+escapeHtml(t.Serial||'')+'</p>';
+  html+='<p><b>Type:</b> '+escapeHtml(t.TroubleType||'(none)')+'</p>';
+  html+='<p><b>Detail:</b><br>'+escapeHtml(t.TroubleDetail||'')+'</p>';
+  if(t.ParentID)html+='<p class="help">↳ Re-opened from '+escapeHtml(t.ParentID)+'</p>';
+  if(t.Status==='Open'){
+    html+='<hr><h3>Resolve Ticket</h3>';
+    html+='<label>Cause</label><textarea id="r_cause" placeholder="Root cause..."></textarea>';
+    html+='<label>Action Taken</label><textarea id="r_action" placeholder="What was done..."></textarea>';
+    html+='<label>Handler</label><select id="r_handler"><option value="">— select —</option>'+MASTERS.staff.map(s=>'<option>'+escapeHtml(s)+'</option>').join('')+'</select>';
+    html+='<label>Work Time (30-min units, max 4h)</label><select id="r_minutes">';
+    for(let m=30;m<=240;m+=30)html+='<option value="'+m+'">'+(m/60).toFixed(1)+' h ('+m+' min)</option>';
+    html+='</select>';
+    html+='<label>Outcome</label><select id="r_outcome"><option value="Solved">Solved</option><option value="Unsolved">Unsolved → spawn new ticket</option></select>';
+    html+='<div class="row" style="margin-top:12px"><button class="btn success" id="btnDoResolve">✔ Mark Resolved</button></div>';
+  }else{
+    html+='<hr><p><b>Cause:</b><br>'+escapeHtml(t.Cause||'')+'</p>';
+    html+='<p><b>Action:</b><br>'+escapeHtml(t.Action||'')+'</p>';
+    html+='<p><b>Handler:</b> '+escapeHtml(t.Handler||'')+' · '+escapeHtml(String(t.WorkMinutes||''))+' min</p>';
+    html+='<p><b>Resolved:</b> '+fmtDate(t.ResolvedAt)+' · Outcome: '+escapeHtml(t.Outcome||'')+'</p>';
+    html+='<hr><h3>Re-open as new request?</h3>';
+    html+='<label>Additional detail (optional)</label><textarea id="ro_detail" placeholder="What is still wrong..."></textarea>';
+    html+='<label>Requester</label><select id="ro_requester"><option value="">— same as original —</option>'+MASTERS.staff.map(s=>'<option>'+escapeHtml(s)+'</option>').join('')+'</select>';
+    html+='<div class="row" style="margin-top:12px"><button class="btn warn" id="btnDoReopen">↻ Re-open ticket</button></div>';
+  }
+  $('modalBody').innerHTML=html;$('modalBg').classList.add('show');
+
+  const btnR=$('btnDoResolve');
+  if(btnR)btnR.addEventListener('click',async()=>{
+    const modal=$('modal');
+    const cause=(modal.querySelector('#r_cause')||{}).value||'';
+    const actionText=(modal.querySelector('#r_action')||{}).value||'';
+    const handler=(modal.querySelector('#r_handler')||{}).value||'';
+    const workMinutes=(modal.querySelector('#r_minutes')||{}).value||'';
+    const outcome=(modal.querySelector('#r_outcome')||{}).value||'Solved';
+    const missing=[];
+    if(!String(cause).trim()) missing.push('Cause');
+    if(!String(actionText).trim()) missing.push('Action');
+    if(!String(handler).trim()) missing.push('Handler');
+    if(missing.length){toast('Missing: '+missing.join(', '),true);return;}
+    // IMPORTANT: field is "actionText" not "action" to avoid collision with routing key
+    const payload={id:t.ID,cause:String(cause).trim(),actionText:String(actionText).trim(),handler:String(handler).trim(),workMinutes:workMinutes,outcome:outcome};
+    btnR.disabled=true;btnR.innerHTML='<span class="loader"></span> Saving...';
+    try{
+      const r=await api('resolveRequest',payload);
+      toast(r.newId?'Resolved. New ticket: '+r.newId:'Resolved ✓');
+      closeModal();await refreshOpen();
+    }catch(e){
+      toast('Server error: '+e.message,true);
+    }finally{
+      btnR.disabled=false;btnR.textContent='✔ Mark Resolved';
+    }
+  });
+
+  const btnRo=$('btnDoReopen');
+  if(btnRo)btnRo.addEventListener('click',async()=>{
+    btnRo.disabled=true;btnRo.innerHTML='<span class="loader"></span> Re-opening...';
+    try{const r=await api('reopenRequest',{id:t.ID,troubleDetail:$('ro_detail').value.trim(),requester:$('ro_requester').value});toast('Re-opened as '+r.id);closeModal();document.querySelector('nav button[data-tab="open"]').click();}catch(e){toast(e.message,true);}finally{btnRo.disabled=false;btnRo.textContent='↻ Re-open ticket';}
+  });
+}
+function closeModal(){$('modalBg').classList.remove('show');$('modalBody').innerHTML='';}
+$('modalClose').addEventListener('click',closeModal);
+$('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')closeModal();});
+
+(function initReportSelectors(){
+  const now=new Date();const yEl=$('reportYear');const mEl=$('reportMonth');
+  for(let y=now.getFullYear()+1;y>=now.getFullYear()-3;y--)yEl.insertAdjacentHTML('beforeend','<option value="'+y+'"'+(y===now.getFullYear()?' selected':'')+'>'+y+'</option>');
+  for(let m=1;m<=12;m++)mEl.insertAdjacentHTML('beforeend','<option value="'+m+'"'+(m===now.getMonth()+1?' selected':'')+'>'+String(m).padStart(2,'0')+'</option>');
+})();
+$('btnReport').addEventListener('click',async()=>{
+  const btn=$('btnReport');btn.disabled=true;btn.innerHTML='<span class="loader"></span> Generating...';
+  try{const r=await api('monthlyReport',{year:$('reportYear').value,month:$('reportMonth').value});toast(r.sheetName+' ready ('+r.totals.count+' tickets)');if(r.sheetUrl&&confirm('Report generated. Open it?\n\nTickets: '+r.totals.count+'\nSolved: '+r.totals.solved+'\nUnsolved: '+r.totals.unsolved+'\nTotal min: '+r.totals.minutes))window.open(r.sheetUrl,'_blank');}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='📊 Generate Report';}
+});
+(async function init(){
+  if(CONFIG.url){try{const r=await api('ping');$('connBadge').textContent='connected v'+r.version;$('connBadge').style.background='rgba(0,255,0,.3)';await loadMasters();}catch(e){$('connBadge').textContent='error';$('connBadge').style.background='rgba(255,0,0,.4)';}}else{document.querySelector('nav button[data-tab="settings"]').click();toast('Set GAS URL in ⚙ Settings');}
+})();
+</script>
+</body>
+</html>
