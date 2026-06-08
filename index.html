@@ -80,6 +80,21 @@
       <div id="f_serialInfo" class="help"></div>
       <label>Trouble Type</label><select id="f_troubleType"><option value="">— select —</option></select>
       <label>Trouble Detail</label><textarea id="f_troubleDetail" placeholder="Describe the issue..."></textarea>
+      
+      <label>📸 Photos (Max 2)</label>
+      <div class="row" style="gap:12px; align-items: flex-start; margin-bottom: 10px;">
+        <div style="flex:1;">
+          <input type="file" id="f_photo1" accept="image/*" style="display:none;">
+          <button class="btn secondary" id="btnPhoto1" type="button" style="width:100%; padding:8px 0;">+ Photo 1</button>
+          <div id="prev_photo1" style="margin-top:6px; text-align:center;"></div>
+        </div>
+        <div style="flex:1;">
+          <input type="file" id="f_photo2" accept="image/*" style="display:none;">
+          <button class="btn secondary" id="btnPhoto2" type="button" style="width:100%; padding:8px 0;">+ Photo 2</button>
+          <div id="prev_photo2" style="margin-top:6px; text-align:center;"></div>
+        </div>
+      </div>
+
       <div class="row" style="margin-top:14px">
         <button class="btn" id="btnCreate">Submit Request</button>
         <button class="btn secondary" id="btnClear">Clear</button>
@@ -123,10 +138,10 @@ const STORAGE_KEY='onsite-support-config';
 let CONFIG=JSON.parse(localStorage.getItem(STORAGE_KEY)||'{}');
 let MASTERS={staff:[],serials:[],trouble:[]};
 let CACHE={open:[],resolved:[]};
+let PHOTO_DATA = { photo1: null, photo2: null };
+
 async function api(action,payload={}){
   if(!CONFIG.url) throw new Error('GAS URL not configured. Open ⚙ Settings.');
-  // CRITICAL: routing key "action" must come AFTER spread of payload
-  // so user-provided fields can never overwrite it
   const body=JSON.stringify(Object.assign({},payload,{action:action}));
   const res=await fetch(CONFIG.url,{method:'POST',headers:{'Content-Type':'text/plain;charset=utf-8'},body});
   const text=await res.text();
@@ -140,6 +155,38 @@ function toast(msg,isErr){const t=$('toast');t.textContent=msg;t.classList.toggl
 function fmtDate(d){if(!d)return'';const x=new Date(d);if(isNaN(x))return String(d);const pad=n=>String(n).padStart(2,'0');return x.getFullYear()+'-'+pad(x.getMonth()+1)+'-'+pad(x.getDate())+' '+pad(x.getHours())+':'+pad(x.getMinutes());}
 function fmtMonth(d){if(!d)return'Unknown';const x=new Date(d);if(isNaN(x))return'Unknown';return x.getFullYear()+'-'+String(x.getMonth()+1).padStart(2,'0');}
 function escapeHtml(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+
+function setupPhotoUploader(inputId, btnId, prevId, key) {
+  $(btnId).addEventListener('click', () => $(inputId).click());
+  $(inputId).addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    if (file.size > 5 * 1024 * 1024) {
+      toast('Image is too large. Max 5MB.', true);
+      $(inputId).value = '';
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      PHOTO_DATA[key] = {
+        base64: event.target.result.split(',')[1],
+        mimeType: file.type,
+        name: file.name
+      };
+      $(prevId).innerHTML = '<img src="' + event.target.result + '" style="max-width:100%; max-height:70px; border-radius:6px; border:1px solid var(--border);"><div class="danger-link" style="margin-top:2px;" onclick="removePhoto(\'' + inputId + '\',\'' + prevId + '\',\'' + key + '\')">Delete</div>';
+    };
+    reader.readAsDataURL(file);
+  });
+}
+setupPhotoUploader('f_photo1', 'btnPhoto1', 'prev_photo1', 'photo1');
+setupPhotoUploader('f_photo2', 'btnPhoto2', 'prev_photo2', 'photo2');
+
+window.removePhoto = function(inputId, prevId, key) {
+  PHOTO_DATA[key] = null;
+  $(inputId).value = '';
+  $(prevId).innerHTML = '';
+};
+
 document.querySelectorAll('nav button').forEach(b=>{
   b.addEventListener('click',()=>{
     document.querySelectorAll('nav button').forEach(x=>x.classList.remove('active'));
@@ -179,9 +226,22 @@ function renderMastersList(){
 $('btnAddStaff').addEventListener('click',async()=>{const v=$('addStaff').value.trim();if(!v)return;try{await api('addMaster',{type:'staff',value:v});$('addStaff').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
 $('btnAddSerial').addEventListener('click',async()=>{const serial=$('addSerial').value.trim();if(!serial)return;try{await api('addMaster',{type:'serial',value:{serial,model:$('addSerialModel').value.trim(),customer:$('addSerialCustomer').value.trim()}});$('addSerial').value='';$('addSerialModel').value='';$('addSerialCustomer').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
 $('btnAddTrouble').addEventListener('click',async()=>{const v=$('addTrouble').value.trim();if(!v)return;try{await api('addMaster',{type:'trouble',value:v});$('addTrouble').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
-$('btnClear').addEventListener('click',()=>{['f_requester','f_serial','f_troubleType'].forEach(id=>$(id).value='');$('f_troubleDetail').value='';$('f_serialInfo').textContent='';});
+$('btnClear').addEventListener('click',()=>{
+  ['f_requester','f_serial','f_troubleType'].forEach(id=>$(id).value='');
+  $('f_troubleDetail').value='';
+  $('f_serialInfo').textContent='';
+  removePhoto('f_photo1', 'prev_photo1', 'photo1');
+  removePhoto('f_photo2', 'prev_photo2', 'photo2');
+});
 $('btnCreate').addEventListener('click',async()=>{
-  const payload={requester:$('f_requester').value,serial:$('f_serial').value,troubleType:$('f_troubleType').value,troubleDetail:$('f_troubleDetail').value.trim()};
+  const payload={
+    requester:$('f_requester').value,
+    serial:$('f_serial').value,
+    troubleType:$('f_troubleType').value,
+    troubleDetail:$('f_troubleDetail').value.trim(),
+    photo1: PHOTO_DATA.photo1,
+    photo2: PHOTO_DATA.photo2
+  };
   if(!payload.requester||!payload.serial||!payload.troubleDetail)return toast('Requester, Serial and Detail are required',true);
   const btn=$('btnCreate');btn.disabled=true;btn.innerHTML='<span class="loader"></span> Submitting...';
   try{const r=await api('createRequest',payload);toast('Request created: '+r.id);$('btnClear').click();document.querySelector('nav button[data-tab="open"]').click();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Submit Request';}
@@ -211,6 +271,11 @@ function openTicketDetail(id,kind){
   html+='<p><b>Serial:</b> '+escapeHtml(t.Serial||'')+'</p>';
   html+='<p><b>Type:</b> '+escapeHtml(t.TroubleType||'(none)')+'</p>';
   html+='<p><b>Detail:</b><br>'+escapeHtml(t.TroubleDetail||'')+'</p>';
+  
+  // 写真のリンク表示
+  if(t.Photo1) html+='<p>📸 <a href="'+escapeHtml(t.Photo1)+'" target="_blank">View Photo 1</a></p>';
+  if(t.Photo2) html+='<p>📸 <a href="'+escapeHtml(t.Photo2)+'" target="_blank">View Photo 2</a></p>';
+
   if(t.ParentID)html+='<p class="help">↳ Re-opened from '+escapeHtml(t.ParentID)+'</p>';
   if(t.Status==='Open'){
     html+='<hr><h3>Resolve Ticket</h3>';
@@ -247,7 +312,6 @@ function openTicketDetail(id,kind){
     if(!String(actionText).trim()) missing.push('Action');
     if(!String(handler).trim()) missing.push('Handler');
     if(missing.length){toast('Missing: '+missing.join(', '),true);return;}
-    // IMPORTANT: field is "actionText" not "action" to avoid collision with routing key
     const payload={id:t.ID,cause:String(cause).trim(),actionText:String(actionText).trim(),handler:String(handler).trim(),workMinutes:workMinutes,outcome:outcome};
     btnR.disabled=true;btnR.innerHTML='<span class="loader"></span> Saving...';
     try{
