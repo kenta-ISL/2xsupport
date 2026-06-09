@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>Onsite Support Manager v1.2</title>
+<title>Onsite Support Manager v1.3</title>
 <style>
   :root{--bg:#f3f5f9;--card:#ffffff;--primary:#1a73e8;--primary-dark:#1557b0;--danger:#d93025;--success:#188038;--warn:#f29900;--text:#202124;--muted:#5f6368;--border:#dadce0;--chip:#e8f0fe;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -57,11 +57,24 @@
   .help{font-size:11px;color:var(--muted);margin-top:4px}
   kbd{background:#eee;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px}
   .ver{font-size:9px;opacity:.7;margin-left:4px}
+  
+  /* Scrollable Checkbox List for Serials */
+  .checkbox-list {
+    max-height: 180px; overflow-y: auto; 
+    border: 1px solid var(--border); border-radius: 8px; 
+    padding: 8px 12px; background: #fff;
+  }
+  .checkbox-item {
+    display: flex; align-items: center; gap: 8px; 
+    margin-bottom: 6px; font-size: 14px; font-weight: normal; color: var(--text);
+  }
+  .checkbox-item input { width: 16px; height: 16px; padding: 0; margin: 0; }
+  .checkbox-item:last-child { margin-bottom: 0; }
 </style>
 </head>
 <body>
 <header>
-  <h1>🛠 Onsite Support<span class="ver">v1.2</span></h1>
+  <h1>🛠 Onsite Support<span class="ver">v1.3</span></h1>
   <span class="badge" id="connBadge">offline</span>
 </header>
 <nav>
@@ -74,10 +87,14 @@
   <section id="tab-new">
     <div class="card">
       <h3>📝 Create Request</h3>
-      <p class="help">Submit a new support request. Duplicate open requests for the same serial number are blocked.</p>
+      <p class="help">Submit a new support request.</p>
+      
       <label>Requester</label><select id="f_requester"><option value="">— select —</option></select>
-      <label>Serial Number</label><select id="f_serial"><option value="">— select —</option></select>
-      <div id="f_serialInfo" class="help"></div>
+      
+      <label>Serial Numbers (Select multiple)</label>
+      <div id="f_serial_container" class="checkbox-list">
+        </div>
+      
       <label>Trouble Type</label><select id="f_troubleType"><option value="">— select —</option></select>
       <label>Trouble Detail</label><textarea id="f_troubleDetail" placeholder="Describe the issue..."></textarea>
       
@@ -108,12 +125,16 @@
   <section id="tab-resolved" hidden>
     <div class="card">
       <div class="row" style="justify-content:space-between"><h3 style="margin:0">✅ Resolved Tickets</h3><button class="btn secondary" id="btnRefreshResolved">↻ Refresh</button></div>
+      
       <div class="row" style="margin-top:10px">
         <select id="reportYear" style="flex:1"></select>
         <select id="reportMonth" style="flex:1"></select>
-        <button class="btn warn" id="btnReport" style="flex:1.4">📊 Generate Report</button>
       </div>
-      <div class="help">Exports a monthly report sheet (with summary + all tickets) into the spreadsheet.</div>
+      <div class="row">
+        <button class="btn warn" id="btnReportStd" style="flex:1">📊 Standard Report</button>
+        <button class="btn secondary" id="btnReportCol" style="flex:1">📦 Collection Report</button>
+      </div>
+      <div class="help">Exports a monthly report sheet. 'Standard' excludes Collections. 'Collection' only counts occurrences.</div>
     </div>
     <div id="resolvedList"></div>
   </section>
@@ -127,8 +148,8 @@
     </div>
     <div class="card"><h3>👥 Staff Master</h3><div class="row"><input id="addStaff" placeholder="Add staff name" /><button class="btn" id="btnAddStaff">Add</button></div><div id="staffList" style="margin-top:8px"></div></div>
     <div class="card"><h3>🔢 Serial Number Master</h3><div class="row"><input id="addSerial" placeholder="Serial (required)" /></div><div class="row"><input id="addSerialModel" placeholder="Model (optional)" /></div><div class="row"><input id="addSerialCustomer" placeholder="Customer (optional)" /><button class="btn" id="btnAddSerial">Add</button></div><div id="serialList" style="margin-top:8px"></div></div>
-    <div class="card"><h3>🏷 Trouble Type Master</h3><div class="row"><input id="addTrouble" placeholder="Add trouble type" /><button class="btn" id="btnAddTrouble">Add</button></div><div id="troubleList" style="margin-top:8px"></div></div>
-    <div class="card"><h3>ℹ About</h3><p class="help">Onsite Support Manager v1.2 — fixed action field name collision.<br>All data lives in your Google Sheet.</p></div>
+    <div class="card"><h3>🏷 Trouble Type Master</h3><div class="row"><input id="addTrouble" placeholder="Add trouble type (e.g. Collection)" /><button class="btn" id="btnAddTrouble">Add</button></div><div id="troubleList" style="margin-top:8px"></div></div>
+    <div class="card"><h3>ℹ About</h3><p class="help">Onsite Support Manager v1.3<br>All data lives in your Google Sheet.</p></div>
   </section>
 </main>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"><h2 id="modalTitle">Ticket</h2><div id="modalBody"></div><div class="modal-actions"><button class="btn secondary" id="modalClose">Close</button></div></div></div>
@@ -212,10 +233,20 @@ async function loadMasters(){try{MASTERS=await api('getMasters');populateRequest
 function populateRequestForm(){
   const sel=(id,items,placeholder)=>{const el=$(id);el.innerHTML='<option value="">— '+placeholder+' —</option>'+items.map(v=>'<option value="'+escapeHtml(v)+'">'+escapeHtml(v)+'</option>').join('');};
   sel('f_requester',MASTERS.staff,'select requester');
-  $('f_serial').innerHTML='<option value="">— select serial —</option>'+MASTERS.serials.map(s=>'<option value="'+escapeHtml(s.serial)+'">'+escapeHtml(s.serial)+(s.model?' / '+escapeHtml(s.model):'')+(s.customer?' / '+escapeHtml(s.customer):'')+'</option>').join('');
   sel('f_troubleType',MASTERS.trouble,'select type');
+  
+  // Render Checkboxes for Serials
+  const container = $('f_serial_container');
+  if(MASTERS.serials.length === 0) {
+    container.innerHTML = '<div class="empty" style="padding:10px;">No serials found</div>';
+  } else {
+    container.innerHTML = MASTERS.serials.map(s => {
+      const display = escapeHtml(s.serial) + (s.model ? ' · ' + escapeHtml(s.model) : '') + (s.customer ? ' · ' + escapeHtml(s.customer) : '');
+      return `<label class="checkbox-item"><input type="checkbox" name="cb_serial" value="${escapeHtml(s.serial)}"> ${display}</label>`;
+    }).join('');
+  }
 }
-$('f_serial').addEventListener('change',e=>{const s=MASTERS.serials.find(x=>x.serial===e.target.value);$('f_serialInfo').textContent=s?[s.model,s.customer].filter(Boolean).join(' · '):'';});
+
 function renderMastersList(){
   const renderRow=(val,type)=>'<div class="row" style="justify-content:space-between;padding:6px 0;border-bottom:1px solid #eee"><span>'+escapeHtml(val)+'</span><span class="danger-link" data-type="'+type+'" data-val="'+escapeHtml(val)+'">delete</span></div>';
   $('staffList').innerHTML=MASTERS.staff.map(v=>renderRow(v,'staff')).join('')||'<div class="empty">empty</div>';
@@ -226,26 +257,41 @@ function renderMastersList(){
 $('btnAddStaff').addEventListener('click',async()=>{const v=$('addStaff').value.trim();if(!v)return;try{await api('addMaster',{type:'staff',value:v});$('addStaff').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
 $('btnAddSerial').addEventListener('click',async()=>{const serial=$('addSerial').value.trim();if(!serial)return;try{await api('addMaster',{type:'serial',value:{serial,model:$('addSerialModel').value.trim(),customer:$('addSerialCustomer').value.trim()}});$('addSerial').value='';$('addSerialModel').value='';$('addSerialCustomer').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
 $('btnAddTrouble').addEventListener('click',async()=>{const v=$('addTrouble').value.trim();if(!v)return;try{await api('addMaster',{type:'trouble',value:v});$('addTrouble').value='';await loadMasters();toast('Added');}catch(e){toast(e.message,true);}});
+
 $('btnClear').addEventListener('click',()=>{
-  ['f_requester','f_serial','f_troubleType'].forEach(id=>$(id).value='');
+  $('f_requester').value='';
+  $('f_troubleType').value='';
   $('f_troubleDetail').value='';
-  $('f_serialInfo').textContent='';
+  document.querySelectorAll('input[name="cb_serial"]').forEach(cb => cb.checked = false);
   removePhoto('f_photo1', 'prev_photo1', 'photo1');
   removePhoto('f_photo2', 'prev_photo2', 'photo2');
 });
+
 $('btnCreate').addEventListener('click',async()=>{
+  const selectedSerials = Array.from(document.querySelectorAll('input[name="cb_serial"]:checked')).map(cb => cb.value);
   const payload={
     requester:$('f_requester').value,
-    serial:$('f_serial').value,
+    serial: selectedSerials.join(', '),
     troubleType:$('f_troubleType').value,
     troubleDetail:$('f_troubleDetail').value.trim(),
     photo1: PHOTO_DATA.photo1,
     photo2: PHOTO_DATA.photo2
   };
-  if(!payload.requester||!payload.serial||!payload.troubleDetail)return toast('Requester, Serial and Detail are required',true);
+  if(!payload.requester||selectedSerials.length===0||!payload.troubleDetail)return toast('Requester, at least 1 Serial, and Detail are required',true);
+  
   const btn=$('btnCreate');btn.disabled=true;btn.innerHTML='<span class="loader"></span> Submitting...';
-  try{const r=await api('createRequest',payload);toast('Request created: '+r.id);$('btnClear').click();document.querySelector('nav button[data-tab="open"]').click();}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='Submit Request';}
+  try{
+    const r=await api('createRequest',payload);
+    toast('Request created: '+r.id);
+    $('btnClear').click();
+    document.querySelector('nav button[data-tab="open"]').click();
+  }catch(e){
+    toast(e.message,true);
+  }finally{
+    btn.disabled=false;btn.textContent='Submit Request';
+  }
 });
+
 function ticketCard(t){
   const trouble=(t.TroubleType?'<span class="chip">'+escapeHtml(t.TroubleType)+'</span>':'');
   const status=t.Status==='Open'?'<span class="chip open">OPEN</span>':'<span class="chip resolved">RESOLVED</span>'+(t.Outcome==='Unsolved'?'<span class="chip unsolved">UNSOLVED</span>':'');
@@ -268,23 +314,30 @@ function openTicketDetail(id,kind){
   let html='';
   html+='<p><b>Requested:</b> '+fmtDate(t.RequestedAt)+'</p>';
   html+='<p><b>Requester:</b> '+escapeHtml(t.Requester||'')+'</p>';
-  html+='<p><b>Serial:</b> '+escapeHtml(t.Serial||'')+'</p>';
+  html+='<p><b>Serial(s):</b> '+escapeHtml(t.Serial||'')+'</p>';
   html+='<p><b>Type:</b> '+escapeHtml(t.TroubleType||'(none)')+'</p>';
   html+='<p><b>Detail:</b><br>'+escapeHtml(t.TroubleDetail||'')+'</p>';
   
-  // 写真のリンク表示
   if(t.Photo1) html+='<p>📸 <a href="'+escapeHtml(t.Photo1)+'" target="_blank">View Photo 1</a></p>';
   if(t.Photo2) html+='<p>📸 <a href="'+escapeHtml(t.Photo2)+'" target="_blank">View Photo 2</a></p>';
 
   if(t.ParentID)html+='<p class="help">↳ Re-opened from '+escapeHtml(t.ParentID)+'</p>';
+  
   if(t.Status==='Open'){
     html+='<hr><h3>Resolve Ticket</h3>';
     html+='<label>Cause</label><textarea id="r_cause" placeholder="Root cause..."></textarea>';
     html+='<label>Action Taken</label><textarea id="r_action" placeholder="What was done..."></textarea>';
     html+='<label>Handler</label><select id="r_handler"><option value="">— select —</option>'+MASTERS.staff.map(s=>'<option>'+escapeHtml(s)+'</option>').join('')+'</select>';
-    html+='<label>Work Time (30-min units, max 4h)</label><select id="r_minutes">';
-    for(let m=30;m<=240;m+=30)html+='<option value="'+m+'">'+(m/60).toFixed(1)+' h ('+m+' min)</option>';
+    
+    // 🔥 Collectionの場合は時間を強制0に制限
+    html+='<label>Work Time</label><select id="r_minutes">';
+    if (t.TroubleType === 'Collection') {
+      html+='<option value="0">0 h (0 min)</option>';
+    } else {
+      for(let m=30;m<=240;m+=30)html+='<option value="'+m+'">'+(m/60).toFixed(1)+' h ('+m+' min)</option>';
+    }
     html+='</select>';
+
     html+='<label>Outcome</label><select id="r_outcome"><option value="Solved">Solved</option><option value="Unsolved">Unsolved → spawn new ticket</option></select>';
     html+='<div class="row" style="margin-top:12px"><button class="btn success" id="btnDoResolve">✔ Mark Resolved</button></div>';
   }else{
@@ -340,10 +393,24 @@ $('modalBg').addEventListener('click',e=>{if(e.target.id==='modalBg')closeModal(
   for(let y=now.getFullYear()+1;y>=now.getFullYear()-3;y--)yEl.insertAdjacentHTML('beforeend','<option value="'+y+'"'+(y===now.getFullYear()?' selected':'')+'>'+y+'</option>');
   for(let m=1;m<=12;m++)mEl.insertAdjacentHTML('beforeend','<option value="'+m+'"'+(m===now.getMonth()+1?' selected':'')+'>'+String(m).padStart(2,'0')+'</option>');
 })();
-$('btnReport').addEventListener('click',async()=>{
-  const btn=$('btnReport');btn.disabled=true;btn.innerHTML='<span class="loader"></span> Generating...';
-  try{const r=await api('monthlyReport',{year:$('reportYear').value,month:$('reportMonth').value});toast(r.sheetName+' ready ('+r.totals.count+' tickets)');if(r.sheetUrl&&confirm('Report generated. Open it?\n\nTickets: '+r.totals.count+'\nSolved: '+r.totals.solved+'\nUnsolved: '+r.totals.unsolved+'\nTotal min: '+r.totals.minutes))window.open(r.sheetUrl,'_blank');}catch(e){toast(e.message,true);}finally{btn.disabled=false;btn.textContent='📊 Generate Report';}
-});
+
+async function generateReport(type) {
+  const btn = type === 'standard' ? $('btnReportStd') : $('btnReportCol');
+  const originalText = btn.textContent;
+  btn.disabled=true;btn.innerHTML='<span class="loader"></span> Gen...';
+  try{
+    const r=await api('monthlyReport',{year:$('reportYear').value,month:$('reportMonth').value, type: type});
+    toast(r.sheetName+' ready ('+r.totals.count+' tickets)');
+    if(r.sheetUrl&&confirm('Report generated. Open it?\n\nTickets: '+r.totals.count)) window.open(r.sheetUrl,'_blank');
+  }catch(e){
+    toast(e.message,true);
+  }finally{
+    btn.disabled=false;btn.textContent=originalText;
+  }
+}
+$('btnReportStd').addEventListener('click', () => generateReport('standard'));
+$('btnReportCol').addEventListener('click', () => generateReport('collection'));
+
 (async function init(){
   if(CONFIG.url){try{const r=await api('ping');$('connBadge').textContent='connected v'+r.version;$('connBadge').style.background='rgba(0,255,0,.3)';await loadMasters();}catch(e){$('connBadge').textContent='error';$('connBadge').style.background='rgba(255,0,0,.4)';}}else{document.querySelector('nav button[data-tab="settings"]').click();toast('Set GAS URL in ⚙ Settings');}
 })();
