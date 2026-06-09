@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
-<title>Onsite Support Manager v1.3</title>
+<title>Onsite Support Manager v1.4</title>
 <style>
   :root{--bg:#f3f5f9;--card:#ffffff;--primary:#1a73e8;--primary-dark:#1557b0;--danger:#d93025;--success:#188038;--warn:#f29900;--text:#202124;--muted:#5f6368;--border:#dadce0;--chip:#e8f0fe;}
   *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
@@ -57,8 +57,6 @@
   .help{font-size:11px;color:var(--muted);margin-top:4px}
   kbd{background:#eee;padding:1px 5px;border-radius:3px;font-family:monospace;font-size:11px}
   .ver{font-size:9px;opacity:.7;margin-left:4px}
-  
-  /* Scrollable Checkbox List for Serials */
   .checkbox-list {
     max-height: 180px; overflow-y: auto; 
     border: 1px solid var(--border); border-radius: 8px; 
@@ -74,7 +72,7 @@
 </head>
 <body>
 <header>
-  <h1>🛠 Onsite Support<span class="ver">v1.3</span></h1>
+  <h1>🛠 Onsite Support<span class="ver">v1.4</span></h1>
   <span class="badge" id="connBadge">offline</span>
 </header>
 <nav>
@@ -93,10 +91,11 @@
       
       <label>Serial Numbers (Select multiple)</label>
       <div id="f_serial_container" class="checkbox-list">
-        </div>
+        <!-- Checkboxes loaded via JS -->
+      </div>
       
-      <label>Trouble Type</label><select id="f_troubleType"><option value="">— select —</option></select>
-      <label>Trouble Detail</label><textarea id="f_troubleDetail" placeholder="Describe the issue..."></textarea>
+      <label>Type</label><select id="f_troubleType"><option value="">— select —</option></select>
+      <label>Detail</label><textarea id="f_troubleDetail" placeholder="Describe the issue..."></textarea>
       
       <label>📸 Photos (Max 2)</label>
       <div class="row" style="gap:12px; align-items: flex-start; margin-bottom: 10px;">
@@ -148,8 +147,8 @@
     </div>
     <div class="card"><h3>👥 Staff Master</h3><div class="row"><input id="addStaff" placeholder="Add staff name" /><button class="btn" id="btnAddStaff">Add</button></div><div id="staffList" style="margin-top:8px"></div></div>
     <div class="card"><h3>🔢 Serial Number Master</h3><div class="row"><input id="addSerial" placeholder="Serial (required)" /></div><div class="row"><input id="addSerialModel" placeholder="Model (optional)" /></div><div class="row"><input id="addSerialCustomer" placeholder="Customer (optional)" /><button class="btn" id="btnAddSerial">Add</button></div><div id="serialList" style="margin-top:8px"></div></div>
-    <div class="card"><h3>🏷 Trouble Type Master</h3><div class="row"><input id="addTrouble" placeholder="Add trouble type (e.g. Collection)" /><button class="btn" id="btnAddTrouble">Add</button></div><div id="troubleList" style="margin-top:8px"></div></div>
-    <div class="card"><h3>ℹ About</h3><p class="help">Onsite Support Manager v1.3<br>All data lives in your Google Sheet.</p></div>
+    <div class="card"><h3>🏷 Type Master</h3><div class="row"><input id="addTrouble" placeholder="Add type (e.g. Collection)" /><button class="btn" id="btnAddTrouble">Add</button></div><div id="troubleList" style="margin-top:8px"></div></div>
+    <div class="card"><h3>ℹ About</h3><p class="help">Onsite Support Manager v1.4<br>All data lives in your Google Sheet.</p></div>
   </section>
 </main>
 <div class="modal-bg" id="modalBg"><div class="modal" id="modal"><h2 id="modalTitle">Ticket</h2><div id="modalBody"></div><div class="modal-actions"><button class="btn secondary" id="modalClose">Close</button></div></div></div>
@@ -235,7 +234,6 @@ function populateRequestForm(){
   sel('f_requester',MASTERS.staff,'select requester');
   sel('f_troubleType',MASTERS.trouble,'select type');
   
-  // Render Checkboxes for Serials
   const container = $('f_serial_container');
   if(MASTERS.serials.length === 0) {
     container.innerHTML = '<div class="empty" style="padding:10px;">No serials found</div>';
@@ -311,6 +309,10 @@ $('btnRefreshResolved').addEventListener('click',refreshResolved);
 function openTicketDetail(id,kind){
   const t=(kind==='open'?CACHE.open:CACHE.resolved).find(x=>x.ID===id);if(!t)return;
   $('modalTitle').innerHTML=t.ID+' — '+(t.Status==='Open'?'<span class="chip open">OPEN</span>':'<span class="chip resolved">RESOLVED</span>');
+  
+  // 大文字小文字の揺れを吸収してCollectionか判定
+  const isCollection = String(t.TroubleType||'').trim().toLowerCase() === 'collection';
+
   let html='';
   html+='<p><b>Requested:</b> '+fmtDate(t.RequestedAt)+'</p>';
   html+='<p><b>Requester:</b> '+escapeHtml(t.Requester||'')+'</p>';
@@ -325,13 +327,18 @@ function openTicketDetail(id,kind){
   
   if(t.Status==='Open'){
     html+='<hr><h3>Resolve Ticket</h3>';
-    html+='<label>Cause</label><textarea id="r_cause" placeholder="Root cause..."></textarea>';
-    html+='<label>Action Taken</label><textarea id="r_action" placeholder="What was done..."></textarea>';
+    
+    // 🔥 Collectionの場合は Cause と Action を非表示に
+    if (!isCollection) {
+      html+='<label>Cause</label><textarea id="r_cause" placeholder="Root cause..."></textarea>';
+      html+='<label>Action Taken</label><textarea id="r_action" placeholder="What was done..."></textarea>';
+    }
+
     html+='<label>Handler</label><select id="r_handler"><option value="">— select —</option>'+MASTERS.staff.map(s=>'<option>'+escapeHtml(s)+'</option>').join('')+'</select>';
     
     // 🔥 Collectionの場合は時間を強制0に制限
     html+='<label>Work Time</label><select id="r_minutes">';
-    if (t.TroubleType === 'Collection') {
+    if (isCollection) {
       html+='<option value="0">0 h (0 min)</option>';
     } else {
       for(let m=30;m<=240;m+=30)html+='<option value="'+m+'">'+(m/60).toFixed(1)+' h ('+m+' min)</option>';
@@ -341,8 +348,10 @@ function openTicketDetail(id,kind){
     html+='<label>Outcome</label><select id="r_outcome"><option value="Solved">Solved</option><option value="Unsolved">Unsolved → spawn new ticket</option></select>';
     html+='<div class="row" style="margin-top:12px"><button class="btn success" id="btnDoResolve">✔ Mark Resolved</button></div>';
   }else{
-    html+='<hr><p><b>Cause:</b><br>'+escapeHtml(t.Cause||'')+'</p>';
-    html+='<p><b>Action:</b><br>'+escapeHtml(t.Action||'')+'</p>';
+    if(!isCollection) {
+      html+='<hr><p><b>Cause:</b><br>'+escapeHtml(t.Cause||'')+'</p>';
+      html+='<p><b>Action:</b><br>'+escapeHtml(t.Action||'')+'</p>';
+    }
     html+='<p><b>Handler:</b> '+escapeHtml(t.Handler||'')+' · '+escapeHtml(String(t.WorkMinutes||''))+' min</p>';
     html+='<p><b>Resolved:</b> '+fmtDate(t.ResolvedAt)+' · Outcome: '+escapeHtml(t.Outcome||'')+'</p>';
     html+='<hr><h3>Re-open as new request?</h3>';
@@ -355,16 +364,27 @@ function openTicketDetail(id,kind){
   const btnR=$('btnDoResolve');
   if(btnR)btnR.addEventListener('click',async()=>{
     const modal=$('modal');
-    const cause=(modal.querySelector('#r_cause')||{}).value||'';
-    const actionText=(modal.querySelector('#r_action')||{}).value||'';
-    const handler=(modal.querySelector('#r_handler')||{}).value||'';
-    const workMinutes=(modal.querySelector('#r_minutes')||{}).value||'';
-    const outcome=(modal.querySelector('#r_outcome')||{}).value||'Solved';
+    const causeEl = modal.querySelector('#r_cause');
+    const actionEl = modal.querySelector('#r_action');
+    const handlerEl = modal.querySelector('#r_handler');
+    const minutesEl = modal.querySelector('#r_minutes');
+    const outcomeEl = modal.querySelector('#r_outcome');
+
+    const cause = causeEl ? causeEl.value : '-';
+    const actionText = actionEl ? actionEl.value : '-';
+    const handler = handlerEl ? handlerEl.value : '';
+    const workMinutes = minutesEl ? minutesEl.value : '0';
+    const outcome = outcomeEl ? outcomeEl.value : 'Solved';
+    
     const missing=[];
-    if(!String(cause).trim()) missing.push('Cause');
-    if(!String(actionText).trim()) missing.push('Action');
+    if (!isCollection) {
+      if(!String(cause).trim()) missing.push('Cause');
+      if(!String(actionText).trim()) missing.push('Action Taken');
+    }
     if(!String(handler).trim()) missing.push('Handler');
+    
     if(missing.length){toast('Missing: '+missing.join(', '),true);return;}
+    
     const payload={id:t.ID,cause:String(cause).trim(),actionText:String(actionText).trim(),handler:String(handler).trim(),workMinutes:workMinutes,outcome:outcome};
     btnR.disabled=true;btnR.innerHTML='<span class="loader"></span> Saving...';
     try{
