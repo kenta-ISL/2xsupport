@@ -91,8 +91,7 @@
       
       <label>Serial Numbers (Select multiple)</label>
       <div id="f_serial_container" class="checkbox-list">
-        <!-- Checkboxes loaded via JS -->
-      </div>
+        </div>
       
       <label>Type</label><select id="f_troubleType"><option value="">— select —</option></select>
       <label>Detail</label><textarea id="f_troubleDetail" placeholder="Describe the issue..."></textarea>
@@ -336,11 +335,12 @@ function openTicketDetail(id,kind){
 
     html+='<label>Handler</label><select id="r_handler"><option value="">— select —</option>'+MASTERS.staff.map(s=>'<option>'+escapeHtml(s)+'</option>').join('')+'</select>';
     
-    // 🔥 Collectionの場合は時間を強制0に制限
+    // 🔥 選択肢の最初に「0 h (0 min)」を追加
     html+='<label>Work Time</label><select id="r_minutes">';
     if (isCollection) {
       html+='<option value="0">0 h (0 min)</option>';
     } else {
+      html+='<option value="0">0 h (0 min)</option>';
       for(let m=30;m<=240;m+=30)html+='<option value="'+m+'">'+(m/60).toFixed(1)+' h ('+m+' min)</option>';
     }
     html+='</select>';
